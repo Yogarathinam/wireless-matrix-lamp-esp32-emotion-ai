@@ -1,4 +1,4 @@
-# 🌈 MoodMatrix – AI Powered Wireless Matrix Lamp  
+# MoodMatrix – AI Powered Wireless Matrix Lamp  
 ### Emotion-Driven LED System using ESP32 + Python AI
 
 MoodMatrix is a real-time emotion-reactive wireless LED matrix lamp powered by an ESP32 web server and a Python-based AI emotion detection engine.
