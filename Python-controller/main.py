@@ -234,7 +234,7 @@ class EmotionWorker(QThread):
                             velocity = np.linalg.norm(current_pos - self.prev_hand_pos)
                             s_val = int(np.interp(velocity, [0.001, 0.05], [80, 5]))
                             self.gesture_speed = s_val
-                            cv2.putText(frame, f"SPEED(ms): {s_val}ms", (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+                            cv2.putText(frame, f"SPEED: {s_val}ms", (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
                             
                             # E. Swipes -> Emotion Shift
                             dx = wrist.x - self.prev_hand_pos[0]
@@ -372,7 +372,7 @@ class EmotionWorker(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MoodMatrix Controller AI")
+        self.setWindowTitle("MoodMatrix By Yogarathinam")
         self.resize(1300, 850)
         self.setStyleSheet(MODERN_STYLE)
         
@@ -381,9 +381,12 @@ class MainWindow(QMainWindow):
         self.last_fx_change = 0
         self.fx_change_interval = 8
         
-        # Initialize Graph Data safely (FIXED: Init here to prevent AttributeError)
+        # Initialize Graph Data safely
         self.graph_data = collections.deque(maxlen=100)
         self.curve = None
+
+        # Rate Limiting for ESP32
+        self.last_api_call = 0
 
         # Main Layout
         central = QWidget()
@@ -724,12 +727,30 @@ class MainWindow(QMainWindow):
         self.last_sent_emotion = None
 
     def trigger_esp32_raw(self, mode_name):
-        try: requests.get(f"{BASE_URL}/api/mode", params={"name": mode_name}, timeout=0.05)
-        except: pass
+        # Prevent spamming ESP32
+        if time.time() - self.last_api_call < 0.2:
+            return
+
+        self.last_api_call = time.time()
+
+        try:
+            requests.get(
+                f"{BASE_URL}/api/mode", 
+                params={"name": mode_name}, 
+                timeout=0.2 # small timeout
+            )
+        except:
+            pass # silently ignore if not connected
 
     def send_setting(self, key, val):
-        try: requests.post(f"{BASE_URL}/api/settings", json={key: val}, timeout=0.05)
-        except: pass
+        try:
+            requests.post(
+                f"{BASE_URL}/api/settings", 
+                json={key: val}, 
+                timeout=0.2
+            )
+        except:
+            pass
 
     def closeEvent(self, event):
         self.worker.stop()
